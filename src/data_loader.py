@@ -41,12 +41,21 @@ def _stable_unit(symbol: str, salt: str) -> float:
 
 def _latest_close(symbol: str, period: str, interval: str) -> float:
     data = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
-    if data.empty or "Close" not in data:
+
+    if data.empty:
         raise ValueError(f"No price data returned for {symbol}")
+
     close = data["Close"].dropna()
+
     if close.empty:
         raise ValueError(f"No closing price available for {symbol}")
-    return float(close.iloc[-1])
+
+    latest = close.iloc[-1]
+
+    if hasattr(latest, "iloc"):
+        latest = latest.iloc[-1]
+
+    return float(latest)
 
 
 def _simulated_tokenized_metrics(symbol: str, reference_price: float) -> dict[str, float]:
