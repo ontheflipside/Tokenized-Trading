@@ -1,31 +1,28 @@
 agent:
   name: Tokenized Equity Strategy Agent
-  mode: paper
+  mode: research
   base_currency: USD
-  report_directory: reports
+  score_buy_threshold: 70
+  score_watch_threshold: 40
+  score_caution_threshold: -40
+  score_exit_threshold: -70
+
+inputs:
+  watchlist_path: data/watchlist.csv
+
+outputs:
+  reports_dir: reports
+  latest_signals_csv: reports/latest_signals.csv
+  latest_signals_html: reports/latest_signals.html
+  paper_trades_csv: reports/paper_trades.csv
 
 risk:
-  max_position_usd: 1000
-  max_portfolio_exposure_usd: 5000
-  stop_loss_pct: 5
-  take_profit_pct: 8
+  max_position_percent: 5.0
+  max_spread_percent: 1.5
+  max_premium_percent: 2.0
+  min_liquidity_score: 40
 
-signals:
-  dislocation_buy_threshold_pct: 1.50
-  dislocation_sell_threshold_pct: -1.50
-  min_liquidity_usd_1pct_depth: 25000
-  min_orderbook_imbalance: 0.15
-
-watchlist:
-  - equity: AAPL
-    token_pair: AAPLx/USD
-  - equity: NVDA
-    token_pair: NVDAx/USD
-  - equity: TSLA
-    token_pair: TSLAx/USD
-  - equity: MSFT
-    token_pair: MSFTx/USD
-
-kraken:
-  public_api_base: https://api.kraken.com/0/public
-  orderbook_depth: 25
+data:
+  tokenized_market_mode: simulated
+  yfinance_period: 5d
+  yfinance_interval: 1d

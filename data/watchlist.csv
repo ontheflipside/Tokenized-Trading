@@ -1,0 +1,7 @@
+symbol,name,tokenized_pair,category
+AAPL,Apple,AAPLx/USD,Large Cap Technology
+TSLA,Tesla,TSLAx/USD,EV and Autonomy
+NVDA,Nvidia,NVDAx/USD,AI and Semiconductors
+COIN,Coinbase,COINx/USD,Crypto Infrastructure
+MSTR,MicroStrategy,MSTRx/USD,Bitcoin Proxy
+AMD,Advanced Micro Devices,AMDx/USD,Semiconductors
