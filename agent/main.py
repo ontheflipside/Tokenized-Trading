@@ -8,6 +8,7 @@ from agent.signals.liquidity import orderbook_metrics
 from agent.signals.scoring import score_signal
 from agent.output.report import write_reports
 from agent.portfolio.paper import PaperPortfolio
+from agent.portfolio.update_outcomes import update_outcomes
 
 
 def action_from_score(score: int) -> str:
@@ -25,20 +26,34 @@ def run(config_path: str = "configs/config.yaml") -> dict:
     portfolio = PaperPortfolio(report_dir / "paper_trades.csv")
 
     rows = []
+
     for item in cfg.watchlist:
         equity = item["equity"]
         token_pair = item["token_pair"]
 
+        print(f"Processing {equity} / {token_pair}")
+
         equity_price = get_equity_last_price(equity)
         token_price = client.get_last_price(token_pair)
+
+        print(f"Equity Price: {equity_price}, Token Price: {token_price}")
+
         orderbook = client.get_order_book(token_pair, cfg.orderbook_depth)
         liquidity = orderbook_metrics(orderbook)
 
+        print(f"Liquidity: {liquidity}")
+
         pd_pct = premium_discount_pct(token_price, equity_price)
-        score, label = score_signal(pd_pct, liquidity, cfg.raw)
+
+        score_result = score_signal(pd_pct, liquidity, cfg.raw)
+        score = score_result["score"]
+        label = score_result["label"]
+        signal_label = score_result["signal_label"]
+        confidence = score_result["confidence"]
+        reason = score_result["reason"]
+
         action = action_from_score(score)
 
-        reason = f"premium_discount={pd_pct}, imbalance={liquidity.get('imbalance')}, spread={liquidity.get('spread_pct')}"
         portfolio.log_signal(token_pair, action, token_price, score, label, reason)
 
         rows.append({
@@ -54,10 +69,16 @@ def run(config_path: str = "configs/config.yaml") -> dict:
             "spread_pct": liquidity.get("spread_pct"),
             "score": score,
             "label": label,
+            "signal_label": signal_label,
+            "confidence": confidence,
+            "reason": reason,
             "action": action,
         })
 
     csv_path, html_path = write_reports(rows, report_dir)
+
+    update_outcomes(str(report_dir / "paper_trades.csv"), cfg.kraken_base)
+
     return {"csv": str(csv_path), "html": str(html_path), "rows": rows}
 
 

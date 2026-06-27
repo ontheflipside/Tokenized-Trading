@@ -4,11 +4,26 @@ import pandas as pd
 
 def write_reports(rows: list[dict], report_dir: Path) -> tuple[Path, Path]:
     report_dir.mkdir(parents=True, exist_ok=True)
+
     df = pd.DataFrame(rows)
+
+    # --- CURRENT SNAPSHOT (no change) ---
     csv_path = report_dir / "latest_signals.csv"
     html_path = report_dir / "latest_signals.html"
     df.to_csv(csv_path, index=False)
 
+    # --- NEW: HISTORY FILE ---
+    history_path = report_dir / "signal_history.csv"
+
+    if history_path.exists():
+        existing_df = pd.read_csv(history_path)
+        combined_df = pd.concat([existing_df, df], ignore_index=True)
+    else:
+        combined_df = df
+
+    combined_df.to_csv(history_path, index=False)
+
+    # --- HTML OUTPUT (no change) ---
     html = df.to_html(index=False, border=0)
     html_doc = f"""
     <html>
@@ -29,5 +44,7 @@ def write_reports(rows: list[dict], report_dir: Path) -> tuple[Path, Path]:
       </body>
     </html>
     """
+
     html_path.write_text(html_doc, encoding="utf-8")
+
     return csv_path, html_path
