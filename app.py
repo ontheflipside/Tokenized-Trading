@@ -174,20 +174,89 @@ def render_latest_signals(signals: pd.DataFrame) -> None:
     col3.metric("Weakest Score", f"{worst_row['symbol']} {worst_row['final_score']}")
     col4.metric("Watch Signals", int(signals["signal"].isin(["STRONG_WATCH", "WATCH"]).sum()))
 
-    st.dataframe(signals, width="stretch")
+    st.subheader("Filters")
 
-    csv_data = signals.to_csv(index=False).encode("utf-8")
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+    with filter_col1:
+        signal_options = sorted(signals["signal"].dropna().unique())
+        selected_signals = st.multiselect(
+            "Signal type",
+            options=signal_options,
+            default=signal_options,
+        )
+
+    with filter_col2:
+        category_options = sorted(signals["category"].dropna().unique())
+        selected_categories = st.multiselect(
+            "Category",
+            options=category_options,
+            default=category_options,
+        )
+
+    with filter_col3:
+        min_score = float(signals["final_score"].min())
+        max_score = float(signals["final_score"].max())
+        score_range = st.slider(
+            "Score range",
+            min_value=-100.0,
+            max_value=100.0,
+            value=(min_score, max_score),
+            step=1.0,
+        )
+
+    filtered = signals.copy()
+
+    if selected_signals:
+        filtered = filtered[filtered["signal"].isin(selected_signals)]
+
+    if selected_categories:
+        filtered = filtered[filtered["category"].isin(selected_categories)]
+
+    filtered = filtered[
+        (filtered["final_score"] >= score_range[0])
+        & (filtered["final_score"] <= score_range[1])
+    ]
+
+    st.subheader("Filtered Signals")
+    st.dataframe(filtered, width="stretch")
+
+    csv_data = filtered.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        label="Download CSV Report",
+        label="Download Filtered CSV Report",
         data=csv_data,
-        file_name="latest_signals.csv",
+        file_name="latest_signals_filtered.csv",
         mime="text/csv",
     )
 
+    st.subheader("Signal Detail")
+
+    if filtered.empty:
+        st.info("No signals match the current filters.")
+        return
+
+    selected_symbol = st.selectbox(
+        "Select a symbol to review",
+        options=filtered["symbol"].tolist(),
+    )
+
+    selected_row = filtered[filtered["symbol"] == selected_symbol].iloc[0]
+
+    detail_col1, detail_col2, detail_col3, detail_col4 = st.columns(4)
+    detail_col1.metric("Signal", selected_row["signal"])
+    detail_col2.metric("Score", selected_row["final_score"])
+    detail_col3.metric("Premium / Discount", f"{selected_row['premium_discount_percent']}%")
+    detail_col4.metric("Spread", f"{selected_row['bid_ask_spread_percent']}%")
+
+    st.write(f"**Name:** {selected_row['name']}")
+    st.write(f"**Category:** {selected_row['category']}")
+    st.write(f"**Tokenized Pair:** {selected_row['tokenized_pair']}")
+    st.write(f"**Notes:** {selected_row['notes']}")
+
     st.subheader("Plain English Summary")
 
-    for _, row in signals.iterrows():
+    for _, row in filtered.iterrows():
         st.write(
             f"**{row['symbol']}**: {row['signal']} with a score of "
             f"{row['final_score']}. Notes: {row['notes']}."
