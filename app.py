@@ -230,7 +230,7 @@ def render_signal_history() -> None:
     selected_symbols = st.multiselect(
         "Select symbols for history view",
         options=symbols,
-        default=symbols[: min(len(symbols), 4)],
+        default=symbols,
     )
 
     filtered = history[history["symbol"].isin(selected_symbols)] if selected_symbols else history
