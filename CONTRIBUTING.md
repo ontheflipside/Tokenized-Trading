@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for your interest in contributing to the Tokenized Equity Strategy Agent.
+Thanks for your interest in contributing to Tokenized Securities Research.
 
 This project is an early research prototype. The best contributions are practical, testable, and focused on improving signal quality, data integrity, documentation, or the research workflow.
 
 ## Good contribution areas
 
-- Tokenized equity data provider integrations.
+- Tokenized securities market data provider integrations.
 - Market data validation and stale data checks.
 - Premium and discount calculation improvements.
 - Liquidity, spread, and slippage scoring.
