@@ -1,1 +1,1 @@
-"""Tokenized equity strategy agent package."""
+"""Tokenized Securities Research package."""
