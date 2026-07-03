@@ -1,5 +1,5 @@
 agent:
-  name: Tokenized Equity Strategy Agent
+  name: Tokenized Securities Research
   mode: research
   base_currency: USD
   score_buy_threshold: 70
