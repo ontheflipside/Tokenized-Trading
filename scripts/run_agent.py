@@ -35,7 +35,7 @@ def main() -> None:
     write_html(signals, ROOT / config["outputs"]["latest_signals_html"], config)
     event_log = append_paper_events(signals, ROOT / config["outputs"]["paper_trades_csv"])
 
-    print("Tokenized equity strategy agent completed.")
+    print("Tokenized Securities Research completed.")
     print(f"Signals generated: {len(signals)}")
     print(f"Paper events logged: {len(event_log)}")
     print(f"CSV report: {config['outputs']['latest_signals_csv']}")
