@@ -13,8 +13,9 @@ from src.signal_engine import build_signals
 ROOT = Path(__file__).resolve().parent
 HISTORY_PATH = ROOT / "reports" / "signal_history.csv"
 PAPER_LOG_PATH = ROOT / "reports" / "paper_trades.csv"
-REQUIRED_HISTORY_COLUMNS = {"run_id", "symbol", "timestamp_utc", "final_score", "signal"}
 WATCHLIST_COLUMNS = ["symbol", "name", "tokenized_pair", "category"]
+REQUIRED_HISTORY_COLUMNS = {"run_id", "symbol", "timestamp_utc", "final_score", "signal"}
+
 LEGACY_RENAME_MAP = {
     "equity": "symbol",
     "token_pair": "tokenized_pair",
@@ -32,7 +33,6 @@ def load_config() -> dict:
     config_path = ROOT / "configs" / "config.yaml"
     example_path = ROOT / "configs" / "config.example.yaml"
     selected = config_path if config_path.exists() else example_path
-
     with selected.open("r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
@@ -88,7 +88,6 @@ def normalize_signal_history(history: pd.DataFrame) -> pd.DataFrame:
 
 def append_signal_history(signals: pd.DataFrame) -> pd.DataFrame:
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-
     run_id = pd.Timestamp.utcnow().strftime("%Y%m%d%H%M%S")
     history_rows = signals.copy()
     history_rows.insert(0, "run_id", run_id)
@@ -128,11 +127,90 @@ def run_agent() -> pd.DataFrame:
     return signals
 
 
-def render_watchlist_editor(watchlist_path: Path) -> None:
-    st.header("Watchlist")
-    st.caption("Edit the tokenized securities or reference assets you want included in the next research run.")
+def render_landing_section() -> None:
+    st.title("Tokenized Securities Research")
+    st.subheader("AI-powered market intelligence for the next generation of capital markets.")
+
+    st.markdown(
+        """
+        As traditional securities begin moving onto blockchain infrastructure, investors and researchers
+        will need new ways to analyze liquidity, pricing behavior, market structure, and settlement dynamics.
+
+        **Tokenized Securities Research** is an open-source research platform exploring how artificial
+        intelligence can help analyze the convergence of traditional finance and blockchain-based markets.
+        """
+    )
+
+    badge_col1, badge_col2, badge_col3, badge_col4 = st.columns(4)
+    badge_col1.metric("Focus", "AI Research")
+    badge_col2.metric("Market Lens", "Blockchain")
+    badge_col3.metric("Reference", "Capital Markets")
+    badge_col4.metric("Version", "v0.1")
+
+    st.markdown("### What this platform does")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("✓ Compares tokenized securities with traditional market references")
+        st.write("✓ Studies pricing differences and market structure")
+        st.write("✓ Tracks premium and discount behavior")
+    with col2:
+        st.write("✓ Reviews liquidity and spread characteristics")
+        st.write("✓ Generates research signals")
+        st.write("✓ Preserves historical research results")
+
+    st.info(
+        "Current status: v0.1 Public Research Preview. This release demonstrates the research framework "
+        "and user interface. Current market data is simulated while live data integrations and additional "
+        "analytics are under development."
+    )
+
+    st.markdown("### Research vision")
+    st.write(
+        "Over the next decade, tokenization may change how securities are issued, analyzed, transferred, "
+        "and settled. The purpose of this project is to explore those changes early by combining AI, "
+        "quantitative research, and blockchain market analysis."
+    )
+
+
+def render_sidebar(watchlist_path: Path) -> bool:
+    st.sidebar.header("Research Controls")
+    st.sidebar.caption("Public research preview v0.1")
+
+    st.sidebar.markdown("**Current Capabilities**")
+    st.sidebar.write("✓ Research universe")
+    st.sidebar.write("✓ Signal engine")
+    st.sidebar.write("✓ Signal history")
+    st.sidebar.write("✓ Research journal")
+
+    st.sidebar.markdown("**Coming in future versions**")
+    st.sidebar.write("• Live market data")
+    st.sidebar.write("• Backtesting")
+    st.sidebar.write("• AI commentary")
+    st.sidebar.write("• Market structure analytics")
+
+    st.sidebar.divider()
+    st.sidebar.write("Watchlist file:")
+    st.sidebar.code(str(watchlist_path))
+    st.sidebar.write("History file:")
+    st.sidebar.code(str(HISTORY_PATH))
+    st.sidebar.write("Research journal file:")
+    st.sidebar.code(str(PAPER_LOG_PATH))
+
+    st.sidebar.divider()
+    return st.sidebar.button("Run Market Research")
+
+
+def render_research_universe(watchlist_path: Path) -> None:
+    st.header("Research Universe")
+    st.caption("Select the securities and tokenized pairs included in the research run.")
 
     watchlist = load_watchlist(watchlist_path)
+
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    metric_col1.metric("Securities", len(watchlist))
+    metric_col2.metric("Tokenized Pairs", int((watchlist["tokenized_pair"].astype(str).str.strip() != "").sum()))
+    metric_col3.metric("Framework", "Hybrid")
 
     edited = st.data_editor(
         watchlist,
@@ -149,62 +227,46 @@ def render_watchlist_editor(watchlist_path: Path) -> None:
 
     col1, col2 = st.columns([1, 3])
     with col1:
-        if st.button("Save Watchlist"):
+        if st.button("Save Universe"):
             saved = save_watchlist(watchlist_path, edited)
-            st.success(f"Watchlist saved with {len(saved)} symbols.")
+            st.success(f"Research universe saved with {len(saved)} symbols.")
             st.rerun()
 
     with col2:
         st.info("Use the blank row at the bottom to add a symbol. Delete a row by selecting it and pressing delete.")
 
 
-def render_latest_signals(signals: pd.DataFrame) -> None:
-    st.header("Latest Research Signals")
+def render_market_signals(signals: pd.DataFrame) -> None:
+    st.header("Market Signals")
+    st.caption("Review current research signals across the selected research universe.")
 
     if signals.empty:
-        st.info("No signal report found yet. Click 'Run Research Report' in the sidebar.")
+        st.info("No signal report found yet. Click 'Run Market Research' in the sidebar.")
         return
 
     col1, col2, col3, col4 = st.columns(4)
-
     best_row = signals.sort_values("final_score", ascending=False).iloc[0]
     worst_row = signals.sort_values("final_score", ascending=True).iloc[0]
 
     col1.metric("Signals Generated", len(signals))
-    col2.metric("Best Score", f"{best_row['symbol']} {best_row['final_score']}")
-    col3.metric("Weakest Score", f"{worst_row['symbol']} {worst_row['final_score']}")
+    col2.metric("Highest Score", f"{best_row['symbol']} {best_row['final_score']}")
+    col3.metric("Lowest Score", f"{worst_row['symbol']} {worst_row['final_score']}")
     col4.metric("Watch Signals", int(signals["signal"].isin(["STRONG_WATCH", "WATCH"]).sum()))
-
-    st.subheader("Filters")
 
     filter_col1, filter_col2, filter_col3 = st.columns(3)
 
     with filter_col1:
         signal_options = sorted(signals["signal"].dropna().unique())
-        selected_signals = st.multiselect(
-            "Signal type",
-            options=signal_options,
-            default=signal_options,
-        )
+        selected_signals = st.multiselect("Signal type", options=signal_options, default=signal_options)
 
     with filter_col2:
         category_options = sorted(signals["category"].dropna().unique())
-        selected_categories = st.multiselect(
-            "Category",
-            options=category_options,
-            default=category_options,
-        )
+        selected_categories = st.multiselect("Category", options=category_options, default=category_options)
 
     with filter_col3:
         min_score = float(signals["final_score"].min())
         max_score = float(signals["final_score"].max())
-        score_range = st.slider(
-            "Score range",
-            min_value=-100.0,
-            max_value=100.0,
-            value=(min_score, max_score),
-            step=1.0,
-        )
+        score_range = st.slider("Score range", min_value=-100.0, max_value=100.0, value=(min_score, max_score), step=1.0)
 
     filtered = signals.copy()
 
@@ -214,34 +276,24 @@ def render_latest_signals(signals: pd.DataFrame) -> None:
     if selected_categories:
         filtered = filtered[filtered["category"].isin(selected_categories)]
 
-    filtered = filtered[
-        (filtered["final_score"] >= score_range[0])
-        & (filtered["final_score"] <= score_range[1])
-    ]
+    filtered = filtered[(filtered["final_score"] >= score_range[0]) & (filtered["final_score"] <= score_range[1])]
 
     st.subheader("Filtered Signals")
     st.dataframe(filtered, width="stretch")
 
-    csv_data = filtered.to_csv(index=False).encode("utf-8")
-
     st.download_button(
         label="Download Filtered CSV Report",
-        data=csv_data,
+        data=filtered.to_csv(index=False).encode("utf-8"),
         file_name="latest_signals_filtered.csv",
         mime="text/csv",
     )
-
-    st.subheader("Signal Detail")
 
     if filtered.empty:
         st.info("No signals match the current filters.")
         return
 
-    selected_symbol = st.selectbox(
-        "Select a symbol to review",
-        options=filtered["symbol"].tolist(),
-    )
-
+    st.subheader("Signal Detail")
+    selected_symbol = st.selectbox("Select a symbol to review", options=filtered["symbol"].tolist())
     selected_row = filtered[filtered["symbol"] == selected_symbol].iloc[0]
 
     detail_col1, detail_col2, detail_col3, detail_col4 = st.columns(4)
@@ -255,13 +307,9 @@ def render_latest_signals(signals: pd.DataFrame) -> None:
     st.write(f"**Tokenized Pair:** {selected_row['tokenized_pair']}")
     st.write(f"**Notes:** {selected_row['notes']}")
 
-    st.subheader("Plain English Summary")
-
+    st.subheader("Research Summary")
     for _, row in filtered.iterrows():
-        st.write(
-            f"**{row['symbol']}**: {row['signal']} with a score of "
-            f"{row['final_score']}. Notes: {row['notes']}."
-        )
+        st.write(f"**{row['symbol']}**: {row['signal']} with a score of {row['final_score']}. Notes: {row['notes']}.")
 
 
 def render_signal_history() -> None:
@@ -269,15 +317,12 @@ def render_signal_history() -> None:
     history = load_signal_history()
 
     if history.empty:
-        st.info("No signal history has been recorded yet. Run a research report to start building history.")
+        st.info("No signal history has been recorded yet. Run Market Research to start building history.")
         return
 
     missing = REQUIRED_HISTORY_COLUMNS.difference(history.columns)
     if missing:
-        st.warning(
-            "The existing signal history file uses an older format and cannot be charted yet. "
-            "Run a new research report to create history in the current format."
-        )
+        st.warning("The existing signal history file uses an older format and cannot be charted yet.")
         st.caption(f"Missing columns: {', '.join(sorted(missing))}")
         st.dataframe(history, width="stretch")
         return
@@ -292,58 +337,42 @@ def render_signal_history() -> None:
     history = history.sort_values(["timestamp_utc", "symbol"])
 
     col1, col2, col3 = st.columns(3)
-    runs_captured = history["run_id"].nunique()
-
     col1.metric("Historical Rows", len(history))
     col2.metric("Unique Symbols", history["symbol"].nunique())
-    col3.metric("Runs Captured", runs_captured)
-
-    if runs_captured < 2:
-        st.info("Run the research report at least two times to see a meaningful trend chart.")
+    col3.metric("Runs Captured", history["run_id"].nunique())
 
     symbols = sorted(history["symbol"].dropna().unique())
-    selected_symbols = st.multiselect(
-        "Select symbols for history view",
-        options=symbols,
-        default=symbols,
-    )
-
+    selected_symbols = st.multiselect("Select symbols for history view", options=symbols, default=symbols)
     filtered = history[history["symbol"].isin(selected_symbols)] if selected_symbols else history
 
     st.subheader("Score Trend")
     if not filtered.empty:
-        chart_data = filtered.pivot_table(
-            index="timestamp_utc",
-            columns="symbol",
-            values="final_score",
-            aggfunc="last",
-        ).sort_index()
+        chart_data = filtered.pivot_table(index="timestamp_utc", columns="symbol", values="final_score", aggfunc="last").sort_index()
         st.line_chart(chart_data)
 
     st.subheader("History Table")
     st.dataframe(filtered.sort_values("timestamp_utc", ascending=False), width="stretch")
 
-    history_csv = history.to_csv(index=False).encode("utf-8")
     st.download_button(
         label="Download Signal History",
-        data=history_csv,
+        data=history.to_csv(index=False).encode("utf-8"),
         file_name="signal_history.csv",
         mime="text/csv",
     )
 
 
-def render_paper_log() -> None:
-    st.header("Paper Research Log")
+def render_research_journal() -> None:
+    st.header("Research Journal")
     st.caption("Review paper research events generated by the signal engine.")
 
     if not PAPER_LOG_PATH.exists():
-        st.info("No paper research log found yet. Run a research report to create paper events.")
+        st.info("No research journal found yet. Run Market Research to create paper research events.")
         return
 
     paper = pd.read_csv(PAPER_LOG_PATH)
 
     if paper.empty:
-        st.info("The paper research log exists, but it does not contain any events yet.")
+        st.info("The research journal exists, but it does not contain any events yet.")
         return
 
     if "timestamp_utc" in paper.columns:
@@ -354,119 +383,38 @@ def render_paper_log() -> None:
     risk_signals = ["CAUTION", "RISK_OFF"]
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Paper Events", len(paper))
-
-    if "symbol" in paper.columns:
-        col2.metric("Unique Symbols", paper["symbol"].nunique())
-    else:
-        col2.metric("Unique Symbols", "N/A")
+    col1.metric("Total Events", len(paper))
+    col2.metric("Unique Symbols", paper["symbol"].nunique() if "symbol" in paper.columns else "N/A")
 
     if "signal" in paper.columns:
-        watch_count = int(paper["signal"].isin(watch_signals).sum())
-        risk_count = int(paper["signal"].isin(risk_signals).sum())
-        col3.metric("Watch Events", watch_count)
-        col4.metric("Risk Events", risk_count)
+        col3.metric("Watch Events", int(paper["signal"].isin(watch_signals).sum()))
+        col4.metric("Risk Events", int(paper["signal"].isin(risk_signals).sum()))
     else:
         col3.metric("Watch Events", "N/A")
         col4.metric("Risk Events", "N/A")
 
-    st.subheader("Paper Log Filters")
-
-    filter_col1, filter_col2 = st.columns(2)
-
     filtered = paper.copy()
 
+    filter_col1, filter_col2 = st.columns(2)
     with filter_col1:
         if "signal" in paper.columns:
             signal_options = sorted(paper["signal"].dropna().unique())
-            selected_signals = st.multiselect(
-                "Signal type",
-                options=signal_options,
-                default=signal_options,
-                key="paper_signal_filter",
-            )
+            selected_signals = st.multiselect("Signal type", options=signal_options, default=signal_options, key="journal_signal_filter")
             if selected_signals:
                 filtered = filtered[filtered["signal"].isin(selected_signals)]
 
     with filter_col2:
         if "symbol" in paper.columns:
             symbol_options = sorted(paper["symbol"].dropna().unique())
-            selected_symbols = st.multiselect(
-                "Symbol",
-                options=symbol_options,
-                default=symbol_options,
-                key="paper_symbol_filter",
-            )
+            selected_symbols = st.multiselect("Symbol", options=symbol_options, default=symbol_options, key="journal_symbol_filter")
             if selected_symbols:
                 filtered = filtered[filtered["symbol"].isin(selected_symbols)]
 
     if filtered.empty:
-        st.info("No paper events match the current filters.")
+        st.info("No research events match the current filters.")
         return
 
-    summary_col1, summary_col2 = st.columns(2)
-
-    with summary_col1:
-        if "signal" in filtered.columns:
-            st.subheader("Events by Signal Type")
-            signal_counts = filtered["signal"].value_counts().reset_index()
-            signal_counts.columns = ["signal", "event_count"]
-            st.dataframe(signal_counts, width="stretch")
-            st.bar_chart(signal_counts.set_index("signal"))
-
-    with summary_col2:
-        if "symbol" in filtered.columns:
-            st.subheader("Events by Symbol")
-            symbol_counts = filtered["symbol"].value_counts().reset_index()
-            symbol_counts.columns = ["symbol", "event_count"]
-            st.dataframe(symbol_counts, width="stretch")
-            st.bar_chart(symbol_counts.set_index("symbol"))
-
-    if {"symbol", "signal"}.issubset(filtered.columns):
-        st.subheader("Repeated Watch Signals")
-        watch_rows = filtered[filtered["signal"].isin(watch_signals)].copy()
-
-        if watch_rows.empty:
-            st.info("No WATCH or STRONG_WATCH events found in the current filter.")
-        else:
-            watch_summary = watch_rows.groupby("symbol").agg(
-                watch_event_count=("signal", "count"),
-                latest_signal=("signal", "first"),
-            )
-
-            if "final_score" in watch_rows.columns:
-                watch_summary["average_score"] = watch_rows.groupby("symbol")["final_score"].mean().round(2)
-                watch_summary["best_score"] = watch_rows.groupby("symbol")["final_score"].max().round(2)
-
-            watch_summary = watch_summary.reset_index().sort_values(
-                "watch_event_count",
-                ascending=False,
-            )
-            st.dataframe(watch_summary, width="stretch")
-
-        st.subheader("Repeated Risk Flags")
-        risk_rows = filtered[filtered["signal"].isin(risk_signals)].copy()
-
-        if risk_rows.empty:
-            st.info("No CAUTION or RISK_OFF events found in the current filter.")
-        else:
-            risk_summary = risk_rows.groupby("symbol").agg(
-                risk_event_count=("signal", "count"),
-                latest_signal=("signal", "first"),
-            )
-
-            if "final_score" in risk_rows.columns:
-                risk_summary["average_score"] = risk_rows.groupby("symbol")["final_score"].mean().round(2)
-                risk_summary["worst_score"] = risk_rows.groupby("symbol")["final_score"].min().round(2)
-
-            risk_summary = risk_summary.reset_index().sort_values(
-                "risk_event_count",
-                ascending=False,
-            )
-            st.dataframe(risk_summary, width="stretch")
-
-    st.subheader("Most Recent Paper Events")
-
+    st.subheader("Most Recent Research Events")
     display_columns = [
         column
         for column in [
@@ -483,71 +431,54 @@ def render_paper_log() -> None:
         if column in filtered.columns
     ]
 
-    if display_columns:
-        st.dataframe(filtered[display_columns], width="stretch")
-    else:
-        st.dataframe(filtered, width="stretch")
+    st.dataframe(filtered[display_columns] if display_columns else filtered, width="stretch")
 
-    paper_csv = filtered.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="Download Filtered Paper Log",
-        data=paper_csv,
-        file_name="paper_trades_filtered.csv",
+        label="Download Filtered Research Journal",
+        data=filtered.to_csv(index=False).encode("utf-8"),
+        file_name="research_journal_filtered.csv",
         mime="text/csv",
     )
 
 
 def main() -> None:
-    st.set_page_config(
-        page_title="Tokenized Securities Research",
-        layout="wide",
-    )
-
-    st.title("Tokenized Securities Research")
-    st.caption("Research dashboard for tokenized securities, market structure, and signal analysis.")
-
-    st.warning(
-        "This is a research tool. It does not place trades or execute orders. "
-        "Current tokenized market metrics are placeholders until a live data provider is connected."
-    )
+    st.set_page_config(page_title="Tokenized Securities Research", layout="wide")
 
     config = load_config()
     watchlist_path = ROOT / config["inputs"]["watchlist_path"]
 
-    st.sidebar.header("Project Controls")
-    st.sidebar.write("Watchlist file:")
-    st.sidebar.code(str(watchlist_path))
-    st.sidebar.write("History file:")
-    st.sidebar.code(str(HISTORY_PATH))
-    st.sidebar.write("Paper log file:")
-    st.sidebar.code(str(PAPER_LOG_PATH))
+    run_requested = render_sidebar(watchlist_path)
+    render_landing_section()
 
-    if st.sidebar.button("Run Research Report"):
-        with st.spinner("Running signal engine..."):
+    main_run_col, note_col = st.columns([1, 2])
+    with main_run_col:
+        run_from_main = st.button("Run Market Research", type="primary")
+    with note_col:
+        st.caption("Run the research engine, then review results in the tabs below.")
+
+    if run_requested or run_from_main:
+        with st.spinner("Running research engine..."):
             signals = run_agent()
         st.success("Research report generated and added to signal history.")
     else:
         latest_path = ROOT / config["outputs"]["latest_signals_csv"]
-        if latest_path.exists():
-            signals = pd.read_csv(latest_path)
-        else:
-            signals = pd.DataFrame()
+        signals = pd.read_csv(latest_path) if latest_path.exists() else pd.DataFrame()
 
-    watchlist_tab, latest_tab, history_tab, paper_tab = st.tabs(
-        ["Watchlist", "Latest Signals", "Signal History", "Paper Log"]
+    universe_tab, signals_tab, history_tab, journal_tab = st.tabs(
+        ["Research Universe", "Market Signals", "Signal History", "Research Journal"]
     )
 
-    with watchlist_tab:
-        render_watchlist_editor(watchlist_path)
+    with universe_tab:
+        render_research_universe(watchlist_path)
 
-    with latest_tab:
-        render_latest_signals(signals)
+    with signals_tab:
+        render_market_signals(signals)
 
     with history_tab:
         render_signal_history()
 
-    with paper_tab:
-        render_paper_log()
+    with journal_tab:
+        render_research_journal()
 
 
 if __name__ == "__main__":
